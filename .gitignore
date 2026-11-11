@@ -1,0 +1,36 @@
+# Node.js / local runtime
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+mvp-app/.env
+mvp-app/.env.*
+!mvp-app/.env.example
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# Generated or temporary files
+coverage/
+dist/
+build/
+tmp/
+temp/
+*.tmp
+*.bak
+
+# Keep original source DOCX outside the upload set; use scrubbed copies in release/
+/*.docx
+release/rendered/
+

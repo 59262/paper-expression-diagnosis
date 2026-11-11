@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>论文原创表达诊断与优化工具</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <header class="app-header">
+    <div>
+      <h1>论文原创表达诊断与优化工具</h1>
+      <p>规则兜底 + 模型增强，帮助定位模板化、空泛化、缺证据和缺少作者判断等表达问题。</p>
+    </div>
+    <div class="header-actions">
+      <button id="loadSampleBtn" class="ghost-btn" type="button">示例</button>
+      <button id="exportBtn" class="primary-btn" type="button" disabled>导出报告</button>
+    </div>
+  </header>
+
+  <main class="app-shell">
+    <section id="startPanel" class="panel input-panel">
+      <div class="notice">
+        <strong>合规提示</strong>
+        <span>本工具不承诺降低任何 AIGC 检测分数，不提供规避检测策略。涉及文献、数据、案例或政策时，只提示补充真实材料，不自动编造事实。</span>
+      </div>
+
+      <section class="model-box" aria-label="模型设置">
+        <details id="modelDetails">
+          <summary class="model-summary">
+            <span>
+              <strong>模型增强</strong>
+              <small>配置已收起，API Key 不会写入代码。</small>
+            </span>
+            <span class="configure-chip">展开配置</span>
+          </summary>
+
+          <div class="model-body">
+            <div class="model-title">
+              <div>
+                <h2>模型增强设置</h2>
+                <p>支持 OpenAI-compatible 接口。密钥只发送到本机代理服务，不写入代码。</p>
+              </div>
+              <label class="switch-row">
+                <input id="modelToggle" type="checkbox">
+                启用模型
+              </label>
+            </div>
+
+            <div class="model-grid">
+              <label>
+                API Key
+                <input id="apiKeyInput" type="password" autocomplete="off" placeholder="粘贴你的 API 密钥">
+              </label>
+              <label>
+                Base URL
+                <input id="baseUrlInput" type="url" placeholder="https://api.deepseek.com">
+              </label>
+              <label>
+                Model
+                <input id="modelInput" type="text" placeholder="deepseek-chat">
+              </label>
+            </div>
+
+            <div class="model-footer">
+              <label class="switch-row">
+                <input id="saveKeyToggle" type="checkbox">
+                记住到本机浏览器
+              </label>
+              <div class="model-actions">
+                <button id="clearKeyBtn" class="ghost-btn" type="button">清除密钥</button>
+                <button id="testModelBtn" class="ghost-btn" type="button">测试连接</button>
+              </div>
+            </div>
+          </div>
+        </details>
+        <div class="model-compact-status">
+          <span id="modelStatus" class="model-status">模型配置已收起。需要接入模型时展开配置。</span>
+        </div>
+      </section>
+
+      <div class="controls-grid">
+        <label>
+          章节类型
+          <select id="sectionSelect">
+            <option value="general">通用</option>
+            <option value="abstract">摘要</option>
+            <option value="introduction">引言</option>
+            <option value="literature_review">文献综述</option>
+            <option value="method">研究方法</option>
+            <option value="result">结果分析</option>
+            <option value="conclusion">结论</option>
+          </select>
+        </label>
+        <label>
+          学科
+          <select id="disciplineSelect">
+            <option value="general">通用</option>
+            <option value="education">教育学</option>
+            <option value="management">管理学</option>
+            <option value="computer_science">计算机</option>
+            <option value="law">法学</option>
+            <option value="literature">文学</option>
+            <option value="other">其他</option>
+          </select>
+        </label>
+        <label>
+          优化强度
+          <select id="strengthSelect">
+            <option value="light">轻度</option>
+            <option value="medium" selected>中度</option>
+            <option value="deep">深度</option>
+          </select>
+        </label>
+      </div>
+
+      <label class="editor-label" for="sourceText">论文文本</label>
+      <textarea id="sourceText" placeholder="粘贴论文摘要、引言、文献综述、结论等内容。建议每次处理一个章节，便于定位问题。"></textarea>
+      <div class="input-footer">
+        <span id="textStats">0 字 / 0 段</span>
+        <div>
+          <button id="clearBtn" class="ghost-btn" type="button">清空</button>
+          <button id="analyzeBtn" class="primary-btn" type="button">开始诊断</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="resultPanel" class="result-layout hidden" aria-live="polite">
+      <aside class="panel paragraph-list">
+        <div class="panel-title">
+          <h2>段落</h2>
+          <span id="summaryBadge">未诊断</span>
+        </div>
+        <div class="filters" id="riskFilters">
+          <button class="filter-btn active" data-filter="all" type="button">全部</button>
+          <button class="filter-btn" data-filter="high" type="button">高</button>
+          <button class="filter-btn" data-filter="medium" type="button">中</button>
+          <button class="filter-btn" data-filter="need_user_input" type="button">需补充</button>
+        </div>
+        <div id="paragraphList" class="paragraph-items"></div>
+      </aside>
+
+      <section class="panel workspace-panel">
+        <div class="panel-title">
+          <h2 id="activeParagraphTitle">原文与编辑</h2>
+          <div class="panel-actions">
+            <button id="backToInputBtn" class="ghost-btn" type="button">返回编辑</button>
+            <button id="reanalyzeBtn" class="ghost-btn" type="button" disabled>重新分析本段</button>
+          </div>
+        </div>
+        <div class="analysis-status-row">
+          <span id="resultModelStatus" class="model-status">单段重新分析状态会显示在这里。</span>
+        </div>
+        <div class="compare-block">
+          <div class="compare-title">原文参照</div>
+          <div id="originalTextView" class="highlighted-text compare-text"></div>
+        </div>
+        <div id="highlightedText" class="hidden"></div>
+        <label class="editor-label" for="editedText">修改区</label>
+        <textarea id="editedText" class="edit-box"></textarea>
+        <div class="edit-meta">
+          <span id="editStats">0 字</span>
+          <span>手动修改后可重新分析本段。模型失败时会保留规则诊断。</span>
+        </div>
+      </section>
+
+      <aside class="panel suggestion-panel">
+        <div class="panel-title">
+          <h2>建议详情</h2>
+          <span id="issueCount">0 条</span>
+        </div>
+        <div id="suggestionList" class="suggestion-list"></div>
+      </aside>
+    </section>
+  </main>
+
+  <template id="suggestionTemplate">
+    <article class="suggestion-card">
+      <div class="suggestion-head">
+        <span class="issue-label"></span>
+        <span class="issue-status"></span>
+      </div>
+      <p class="span-text"></p>
+      <dl>
+        <dt>原因</dt>
+        <dd class="issue-reason"></dd>
+        <dt>解决策略</dt>
+        <dd class="issue-steps"></dd>
+        <dt>参考改法</dt>
+        <dd class="rewrite-sample"></dd>
+      </dl>
+      <div class="suggestion-actions">
+        <button class="accept-btn" type="button">采纳</button>
+        <button class="need-btn" type="button">需补充</button>
+        <button class="ignore-btn" type="button">忽略</button>
+      </div>
+    </article>
+  </template>
+
+  <script src="./app.js"></script>
+</body>
+</html>
